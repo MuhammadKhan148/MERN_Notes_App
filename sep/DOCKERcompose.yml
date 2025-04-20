@@ -1,0 +1,211 @@
+# docker-compose.yml
+
+# Define networks for containers
+networks:
+  default:
+    name: my_network
+  backend_network:
+    driver: bridge
+  frontend_network:
+    driver: bridge
+
+# Define services (containers)
+services:
+
+  # Example 1: Nginx as a reverse proxy
+  nginx:
+    container_name: my_nginx
+    image: nginx:latest
+    ports:
+      - "80:80"  # Expose port 80 of Nginx to the host
+    networks:
+      - default
+      - backend_network
+      - frontend_network
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro  # Mount custom Nginx config
+
+  # Example 2: React frontend
+  react_app:
+    container_name: my_react_app
+    build:
+      context: ./frontend  # Path to the React app directory
+      dockerfile: Dockerfile  # Dockerfile for React app build
+    ports:
+      - "3000:3000"  # Expose React app on port 3000
+    networks:
+      - default
+      - frontend_network
+    depends_on:
+      - api  # Wait for the backend service before starting
+
+  # Example 3: Node.js API (without Express)
+  node_app_no_express:
+    container_name: my_node_app_no_express
+    build:
+      context: ./node  # Path to Node.js project directory without Express
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"  # Expose Node.js app on port 5000
+    networks:
+      - default
+      - backend_network
+    command: node server.js  # Command to run the Node.js server (no Express)
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/mydb  # MongoDB URI for connecting
+
+  # Example 4: Node.js API with Express
+  node_app_express:
+    container_name: my_node_app_express
+    build:
+      context: ./node  # Path to Node.js project directory with Express
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"  # Expose Express app on port 4000
+    networks:
+      - default
+      - backend_network
+    command: node server.js  # Command to run the Express server (with Express)
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/mydb  # MongoDB URI for connecting
+
+  # Example 5: Express Backend with MongoDB
+  api:
+    container_name: my_api
+    build:
+      context: ./backend  # Path to backend project directory (Node.js/Express)
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/mydb  # MongoDB URI for connecting
+    networks:
+      - default
+      - backend_network
+    depends_on:
+      - mongo  # Wait for MongoDB to be ready before starting the backend
+
+  # Example 6: MongoDB Database (Still needed for both Express and Node.js)
+  mongo:
+    container_name: my_mongo
+    image: mongo:latest
+    ports:
+      - "27017:27017"  # Expose MongoDB on port 27017
+    volumes:
+      - mongo_data:/data/db  # Mount persistent storage for MongoDB data
+    networks:
+      - default
+      - backend_network
+
+# Define volumes for persistent data
+volumes:
+  mongo_data:
+
+# --------------- ADDITIONAL PLACES FOR CONFIGURATION ---------------
+# Below are sections where you can add more services, networks, or volumes
+# You can use the placeholders and comments below to guide the modifications
+
+# 1. Add another service (e.g., Redis, or a custom backend)
+# You can create a new service by copying and modifying one of the existing services
+# Example for a Redis service:
+# redis:
+#   container_name: my_redis
+#   image: redis:latest
+#   ports:
+#     - "6379:6379"  # Expose Redis on port 6379
+#   networks:
+#     - backend_network
+#   volumes:
+#     - redis_data:/data
+
+# 2. Add a custom network if you need more complex networking (for example, separating front-end and back-end services)
+# You can define new networks below if needed, or modify existing ones
+# networks:
+#   custom_network:
+#     driver: bridge
+#   frontend_network:
+#     driver: bridge
+#   backend_network:
+#     driver: bridge
+
+# 3. Add more volumes if necessary, especially for persistent storage or custom configurations
+# For example, adding a volume for Redis data:
+# volumes:
+#   redis_data:
+#     driver: local
+#   mongo_data:
+#     driver: local
+
+# 4. Add environment variables for new services
+# For example, if you are adding a new backend service with environment variables, you can configure it here:
+# environment:
+#   - DATABASE_URL=your_database_url
+#   - API_KEY=your_api_key
+
+# 5. Use different Docker images or versions if required
+# Example for changing the Node.js image to a specific version:
+# image: node:14-alpine  # Using Node.js 14 Alpine version for a lighter image
+
+# 6. Add cron jobs or scheduled tasks (e.g., a container for running backups)
+# You can add a cron job container by adding another service that runs periodically
+# Example for a cron job to backup a database:
+# backup_service:
+#   container_name: my_backup
+#   image: busybox
+#   command: sh -c "echo 'Running backup' && sleep 60"
+#   networks:
+#     - backend_network
+#   volumes:
+#     - mongo_data:/data/db
+#   restart: unless-stopped  # Ensures it restarts unless stopped manually
+# -------------------------------------------------------------------
+
+# Comments with Docker and Docker Compose commands
+
+# 1. Build and start all containers:
+#    docker-compose up --build   # Builds images if necessary and starts containers
+
+# 2. Run containers in detached mode (in the background):
+#    docker-compose up -d  # This runs containers in the background
+
+# 3. Stop all containers and remove networks and volumes:
+#    docker-compose down  # Stops the containers and removes the created networks/volumes
+
+# 4. Restart services:
+#    docker-compose restart  # Restarts all running services
+
+# 5. View logs of all running containers:
+#    docker-compose logs  # Shows logs for all services
+
+# 6. View logs for a specific service:
+#    docker-compose logs <service_name>  # e.g., docker-compose logs api for the backend logs
+
+# 7. To inspect running containers:
+#    docker ps  # List all running containers
+#    docker ps -a  # List all containers (including stopped ones)
+
+# 8. Access a container's shell:
+#    docker exec -it <container_name> /bin/bash  # Example: docker exec -it my_api /bin/bash
+
+# 9. To enter a container and run commands:
+#    docker exec -it my_node_app_express /bin/bash  # Enter into the Node.js Express container
+
+# 10. Remove a specific container:
+#    docker rm <container_name>  # Example: docker rm my_api (removes a stopped container)
+
+# 11. Remove all containers:
+#    docker rm $(docker ps -a -q)  # Removes all containers (stopped or running)
+
+# 12. Build an individual service:
+#    docker-compose build <service_name>  # Example: docker-compose build api (builds just the api service)
+
+
+
+
+
+
+
+
+
+
+

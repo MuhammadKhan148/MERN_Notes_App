@@ -13,11 +13,16 @@ export default function Home() {
         letterSpacing: "1px",
         fontSize: "1.3em",
     };
+
     const [notes, setNotes] = useState([]);
+
+    // ✅ Use VITE env variable for dynamic API URL
+    const API_URL = import.meta.env.VITE_APP_API_URL;
+
     useEffect(() => {
         const fetchNotes = () => {
             axios
-                .get("https://mern-notes-backend-5z2j.onrender.com/allNotes")
+                .get(`${API_URL}/allNotes`)
                 .then((res) => {
                     if (res.data.content) {
                         setNotes(res.data.content);
@@ -26,11 +31,13 @@ export default function Home() {
                     }
                 })
                 .catch((err) => {
-                    console.log(err);
+                    console.error("Error fetching notes:", err);
+                    setNotes([]);
                 });
         };
         fetchNotes();
-    }, []);
+    }, [API_URL]);
+
     return (
         <div>
             <h1 className="headline">
